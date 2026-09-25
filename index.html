@@ -1,242 +1,438 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="/manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Petrol Expenditure Tracker</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:rgba(255,255,255,.04); --border:rgba(255,255,255,.09);
+    --text:#e8edf4; --muted:#8b96a5; --accent:#ffb703; --accent2:#fb8500;
+    --good:#2dd4a7; --bad:#ff6b6b; --radius:16px;
   }
-</script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Petrol Expenditure Tracker</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
-            background:#f0f2f5; color:#333; padding:16px;
-        }
-        .container { max-width:960px; margin:0 auto; }
-        h1 { text-align:center; margin-bottom:6px; color:#1a1a2e; font-size:1.5rem; }
-        .subtitle { text-align:center; color:#666; margin-bottom:24px; font-size:.9rem; }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(255,183,3,.14), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(255,133,0,.10), transparent 60%),
+      var(--bg);
+    color:var(--text); min-height:100vh; padding:24px 16px 48px;
+  }
+  .wrap{max-width:1100px; margin:0 auto}
 
-        /* Summary */
-        .summary { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:24px; }
-        .card { background:#fff; border-radius:10px; padding:16px 18px; box-shadow:0 2px 8px rgba(0,0,0,.07); text-align:center; }
-        .card .label { font-size:.75rem; text-transform:uppercase; letter-spacing:.4px; color:#888; margin-bottom:4px; }
-        .card .value { font-size:1.3rem; font-weight:700; color:#1a1a2e; }
+  /* ---------- header ---------- */
+  header{display:flex; align-items:center; gap:16px; margin-bottom:24px}
+  .logo{
+    width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:28px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    box-shadow:0 8px 24px rgba(255,183,3,.35);
+  }
+  header h1{font-size:1.45rem; letter-spacing:.2px}
+  header p{color:var(--muted); font-size:.9rem; margin-top:2px}
 
-        /* Form */
-        .form-section { background:#fff; border-radius:10px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-bottom:24px; }
-        .form-section h2 { font-size:1rem; margin-bottom:16px; color:#1a1a2e; border-bottom:1px solid #eee; padding-bottom:8px; }
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        .form-group { display:flex; flex-direction:column; }
-        .form-group label { font-size:.8rem; font-weight:600; color:#555; margin-bottom:5px; }
-        .form-group input, .form-group select {
-            padding:10px 12px; border:1.5px solid #ddd; border-radius:6px; font-size:.95rem;
-        }
-        .form-group input:focus, .form-group select:focus { outline:none; border-color:#4a6cf7; }
-        .btn-row { margin-top:16px; display:flex; gap:10px; }
-        .btn { padding:10px 20px; border:none; border-radius:6px; font-size:.9rem; font-weight:600; cursor:pointer; }
-        .btn-primary { background:#4a6cf7; color:#fff; }
-        .btn-secondary { background:#eee; color:#555; }
+  /* ---------- cards / panels ---------- */
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    backdrop-filter:blur(14px); padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .card h2{font-size:1rem; margin-bottom:16px; display:flex; align-items:center; gap:8px}
 
-        /* Table */
-        .table-section { background:#fff; border-radius:10px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow-x:auto; }
-        .table-section h2 { font-size:1rem; margin-bottom:14px; color:#1a1a2e; border-bottom:1px solid #eee; padding-bottom:8px; }
-        table { width:100%; border-collapse:collapse; font-size:.85rem; }
-        thead th { background:#f7f8fa; text-align:left; padding:10px 12px; font-weight:700; color:#444; border-bottom:2px solid #e0e0e0; white-space:nowrap; }
-        tbody td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
-        tbody tr:hover { background:#f9fafb; }
+  /* ---------- stats ---------- */
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:20px}
+  .stat{padding:16px 18px}
+  .stat .label{color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.8px}
+  .stat .value{font-size:1.55rem; font-weight:700; margin-top:6px}
+  .stat .sub{color:var(--muted); font-size:.78rem; margin-top:3px}
+  .stat.accent .value{background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent}
 
-        .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:.72rem; font-weight:600; }
-        .badge-95 { background:#e8f5e9; color:#2e7d32; }
-        .badge-97 { background:#fff3e0; color:#e65100; }
-        .badge-half { background:#e3f2fd; color:#1565c0; }
+  /* ---------- form ---------- */
+  .form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px}
+  label{font-size:.78rem; color:var(--muted); display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px}
+  input,select,textarea{
+    width:100%; padding:11px 13px; border-radius:10px; font-size:.92rem;
+    background:rgba(0,0,0,.3); border:1px solid var(--border); color:var(--text);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus,select:focus,textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,183,3,.15)}
+  .actions{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap}
+  button{
+    font-size:.9rem; font-weight:600; border:none; cursor:pointer; border-radius:10px;
+    padding:11px 18px; transition:transform .12s, box-shadow .12s, background .15s;
+  }
+  button:active{transform:scale(.97)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1200; box-shadow:0 6px 18px rgba(255,150,0,.35)}
+  .btn-ghost{background:transparent; color:var(--muted); border:1px solid var(--border)}
+  .btn-ghost:hover{color:var(--text); border-color:rgba(255,255,255,.25)}
 
-        .btn-delete { background:none; border:none; color:#e74c3c; cursor:pointer; font-size:.8rem; font-weight:600; }
+  /* ---------- toolbar ---------- */
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px}
+  .toolbar input[type=search], .toolbar select{width:auto; min-width:130px}
+  .toolbar .spacer{flex:1}
+  .badge-count{background:rgba(255,183,3,.15); color:var(--accent); border-radius:999px; padding:4px 12px; font-size:.85rem; font-weight:700}
 
-        .footer { text-align:center; margin-top:24px; color:#999; font-size:.75rem; }
-    </style>
+  /* ---------- table ---------- */
+  .table-scroll{overflow-x:auto; border-radius:12px}
+  table{width:100%; border-collapse:collapse; min-width:640px}
+  th,td{padding:11px 12px; text-align:left; font-size:.87rem; white-space:nowrap}
+  thead th{color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.7px; border-bottom:1px solid var(--border); cursor:pointer; user-select:none}
+  thead th:hover{color:var(--text)}
+  thead th .arrow{color:var(--accent); margin-left:4px}
+  tbody tr{border-bottom:1px solid rgba(255,255,255,.05); transition:background .12s}
+  tbody tr:hover{background:rgba(255,255,255,.04)}
+  td.num{font-variant-numeric:tabular-nums}
+  .fuel-badge{padding:3px 10px; border-radius:999px; font-size:.75rem; font-weight:600}
+  .f-95{background:rgba(45,212,167,.15); color:var(--good)}
+  .f-97{background:rgba(80,160,255,.15); color:#6cb0ff}
+  .f-half{background:rgba(255,183,3,.15); color:var(--accent)}
+  .f-none{background:rgba(255,255,255,.07); color:var(--muted)}
+  .icon-btn{
+    width:30px;height:30px; border-radius:8px; background:transparent; padding:0;
+    color:var(--muted); font-size:.9rem; display:inline-grid; place-items:center;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.08); color:var(--text)}
+  .icon-btn.del:hover{color:var(--bad); background:rgba(255,107,107,.12)}
+  .notes-cell{max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:normal}
+
+  /* ---------- chart ---------- */
+  canvas{width:100%; height:260px; display:block}
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:#1c2330; border:1px solid var(--border); color:var(--text);
+    padding:12px 20px; border-radius:12px; font-size:.9rem; opacity:0; transition:.3s; z-index:50;
+    box-shadow:0 10px 30px rgba(0,0,0,.4); pointer-events:none;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:26px}
+  .section-gap{margin-bottom:20px}
+</style>
 </head>
 <body>
-<div class="container">
-    <h1>⛽ Petrol Expenditure Tracker</h1>
-    <p class="subtitle">Log your fuel purchases &amp; track spending (RM)</p>
+<div class="wrap">
 
-    <div class="summary" id="summaryCards"></div>
+  <header>
+    <div class="logo">⛽</div>
+    <div>
+      <h1>Petrol Expenditure Tracker</h1>
+      <p>Log your fuel purchases &amp; track spending (RM)</p>
+    </div>
+  </header>
 
-    <div class="form-section">
-        <h2>Add New Entry</h2>
-        <form id="petrolForm">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="distance">Distance (km)</label>
-                    <input type="number" id="distance" placeholder="e.g. 300" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="date">Date</label>
-                    <input type="date" id="date" required>
-                </div>
-                <div class="form-group">
-                    <label for="cost">Cost (RM)</label>
-                    <input type="number" id="cost" placeholder="e.g. 65.00" min="1" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="fuelType">Fuel Type</label>
-                    <select id="fuelType">
-                        <option value="">— Select —</option>
-                        <option value="95">95 Petrol</option>
-                        <option value="97">97 Petrol</option>
-                        <option value="half">Half Tank</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group" style="margin-top:12px;">
-                <label for="notes">Notes (optional)</label>
-                <input type="text" id="notes" placeholder="e.g. Full tank, highway trip">
-            </div>
-            <div class="btn-row">
-                <button type="submit" class="btn btn-primary">＋ Add Entry</button>
-                <button type="reset" class="btn btn-secondary">Clear</button>
-            </div>
-        </form>
+  <!-- STATS -->
+  <section class="stats" id="stats">
+    <div class="card stat accent"><div class="label">Total Spent</div><div class="value" id="st-total">RM 0</div><div class="sub" id="st-entries">0 entries</div></div>
+    <div class="card stat"><div class="label">Distance Driven</div><div class="value" id="st-km">0 km</div><div class="sub" id="st-avgdist">avg –/fill-up</div></div>
+    <div class="card stat"><div class="label">Avg Cost / km</div><div class="value" id="st-rmk">RM 0.00</div><div class="sub" id="st-months">spanning –</div></div>
+    <div class="card stat"><div class="label">Best Economy Fill</div><div class="value" id="st-best">–</div><div class="sub" id="st-bestdate">&nbsp;</div></div>
+  </section>
+
+  <!-- ADD ENTRY -->
+  <section class="card section-gap">
+    <h2>✏️ Add New Entry <span id="editIndicator" style="display:none;color:var(--accent);font-size:.85rem">— editing entry</span></h2>
+    <form id="entryForm">
+      <div class="form-grid">
+        <div><label for="distance">Distance (km)</label><input type="number" id="distance" min="1" step="0.1" required placeholder="e.g. 300"></div>
+        <div><label for="date">Date</label><input type="date" id="date" required></div>
+        <div><label for="cost">Cost (RM)</label><input type="number" id="cost" min="0" step="0.01" required placeholder="e.g. 65"></div>
+        <div>
+          <label for="fuelType">Fuel Type</label>
+          <select id="fuelType">
+            <option value="">— Select —</option>
+            <option value="95">95 Petrol</option>
+            <option value="97">97 Petrol</option>
+            <option value="half">Half Tank</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1"><label for="notes">Notes (optional)</label><input type="text" id="notes" placeholder="e.g. Half tank, highway trip…"></div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn-primary" id="submitBtn">＋ Add Entry</button>
+        <button type="button" class="btn-ghost" id="cancelEdit" style="display:none">Cancel Edit</button>
+        <button type="reset" class="btn-ghost">Clear</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- CHART -->
+  <section class="card section-gap">
+    <h2>📊 Monthly Spending (RM) &amp; Avg RM/km</h2>
+    <canvas id="chart"></canvas>
+  </section>
+
+  <!-- ENTRIES -->
+  <section class="card">
+    <h2>📒 Entries <span class="badge-count" id="countBadge">0</span></h2>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Search notes / fuel…">
+      <select id="filterFuel">
+        <option value="">All fuel types</option>
+        <option value="95">95 Petrol</option>
+        <option value="97">97 Petrol</option>
+        <option value="half">Half Tank</option>
+        <option value=""> </option>
+      </select>
+      <select id="filterYear"></select>
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="exportBtn">⬇ Export CSV</button>
+      <button class="btn-ghost" id="clearAllBtn" style="color:var(--bad)">🗑 Clear All</button>
     </div>
 
-    <div class="table-section">
-        <h2>Entries (<span id="entryCount">0</span>)</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Date</th>
-                    <th>km</th>
-                    <th>Cost (RM)</th>
-                    <th>Fuel</th>
-                    <th>Notes</th>
-                    <th>RM/km</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th data-sort="date">Date<span class="arrow"></span></th>
+            <th data-sort="distance">km<span class="arrow"></span></th>
+            <th data-sort="cost">Cost (RM)<span class="arrow"></span></th>
+            <th>Fuel</th>
+            <th>Notes</th>
+            <th data-sort="rate">RM/km<span class="arrow"></span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
+    <p style="color:var(--muted);font-size:.78rem;margin-top:14px">💾 Data stored locally on this device. Click a column header to sort.</p>
+  </section>
 
-    <p class="footer">Data stored locally on this device.</p>
+  <footer>⛽ Petrol Expenditure Tracker — your fuel costs, visualised.</footer>
 </div>
+
+<div id="toast"></div>
 
 <script>
 const defaultEntries = [
-    {distance:232,date:"2025-07-04",cost:65,fuelType:"",notes:""},
-    {distance:292,date:"2025-04-17",cost:65,fuelType:"",notes:""},
-    {distance:330,date:"2025-05-02",cost:65,fuelType:"",notes:""},
-    {distance:306,date:"2025-05-13",cost:65,fuelType:"",notes:""},
-    {distance:331,date:"2025-05-22",cost:97,fuelType:"97",notes:""},
-    {distance:211,date:"2025-06-05",cost:69,fuelType:"",notes:""},
-    {distance:424,date:"2025-06-12",cost:42,fuelType:"half",notes:"Half tank"},
-    {distance:400,date:"2025-06-29",cost:65,fuelType:"",notes:""},
-    {distance:295,date:"2025-07-05",cost:63,fuelType:"",notes:""},
-    {distance:285,date:"2025-07-26",cost:57,fuelType:"",notes:""},
-    {distance:280,date:"2025-08-09",cost:55,fuelType:"",notes:""},
-    {distance:246,date:"2025-08-23",cost:47,fuelType:"",notes:""},
-    {distance:287,date:"2025-09-08",cost:47,fuelType:"",notes:""},
-    {distance:280,date:"2025-10-01",cost:54,fuelType:"",notes:""},
-    {distance:305,date:"2025-10-22",cost:40,fuelType:"",notes:""},
-    {distance:266,date:"2025-11-16",cost:57,fuelType:"",notes:""},
-    {distance:329,date:"2025-11-30",cost:49,fuelType:"",notes:""},
-    {distance:349,date:"2025-12-21",cost:56,fuelType:"",notes:""},
-    {distance:397,date:"2025-12-25",cost:58,fuelType:"",notes:""},
-    {distance:327,date:"2026-01-04",cost:57,fuelType:"",notes:""},
-    {distance:350,date:"2026-01-26",cost:57,fuelType:"",notes:""},
-    {distance:372,date:"2026-02-14",cost:57,fuelType:"",notes:""},
-    {distance:348,date:"2026-02-15",cost:55,fuelType:"",notes:""},
-    {distance:292,date:"2026-02-22",cost:47,fuelType:"",notes:""},
-    {distance:267,date:"2026-03-16",cost:54,fuelType:"",notes:""},
-    {distance:310,date:"2026-04-07",cost:48,fuelType:"",notes:""},
-    {distance:313,date:"2026-05-04",cost:62,fuelType:"",notes:""},
-    {distance:307,date:"2026-05-30",cost:59,fuelType:"",notes:""},
-    {distance:311,date:"2026-06-22",cost:62,fuelType:"",notes:""},
-    {distance:273,date:"2026-07-19",cost:54,fuelType:"",notes:""},
-    {distance:279,date:"2026-08-12",cost:58,fuelType:"",notes:""},
-    {distance:322,date:"2026-09-01",cost:58,fuelType:"",notes:""}
+{distance:232,date:"2025-07-04",cost:65,fuelType:"",notes:""},
+{distance:292,date:"2025-04-17",cost:65,fuelType:"",notes:""},
+{distance:330,date:"2025-05-02",cost:65,fuelType:"",notes:""},
+{distance:306,date:"2025-05-13",cost:65,fuelType:"",notes:""},
+{distance:331,date:"2025-05-22",cost:97,fuelType:"97",notes:""},
+{distance:211,date:"2025-06-05",cost:69,fuelType:"",notes:""},
+{distance:424,date:"2025-06-12",cost:42,fuelType:"half",notes:"Half tank"},
+{distance:400,date:"2025-06-29",cost:65,fuelType:"",notes:""},
+{distance:295,date:"2025-07-05",cost:63,fuelType:"",notes:""},
+{distance:285,date:"2025-07-26",cost:57,fuelType:"",notes:""},
+{distance:280,date:"2025-08-09",cost:55,fuelType:"",notes:""},
+{distance:246,date:"2025-08-23",cost:47,fuelType:"",notes:""},
+{distance:287,date:"2025-09-08",cost:47,fuelType:"",notes:""},
+{distance:280,date:"2025-10-01",cost:54,fuelType:"",notes:""},
+{distance:305,date:"2025-10-22",cost:40,fuelType:"",notes:""},
+{distance:266,date:"2025-11-16",cost:57,fuelType:"",notes:""},
+{distance:329,date:"2025-11-30",cost:49,fuelType:"",notes:""},
+{distance:349,date:"2025-12-21",cost:56,fuelType:"",notes:""},
+{distance:397,date:"2025-12-25",cost:58,fuelType:"",notes:""},
+{distance:327,date:"2026-01-04",cost:57,fuelType:"",notes:""},
+{distance:350,date:"2026-01-26",cost:57,fuelType:"",notes:""},
+{distance:372,date:"2026-02-14",cost:57,fuelType:"",notes:""},
+{distance:348,date:"2026-02-15",cost:55,fuelType:"",notes:""},
+{distance:292,date:"2026-02-22",cost:47,fuelType:"",notes:""},
+{distance:267,date:"2026-03-16",cost:54,fuelType:"",notes:""},
+{distance:310,date:"2026-04-07",cost:48,fuelType:"",notes:""},
+{distance:313,date:"2026-05-04",cost:62,fuelType:"",notes:""},
+{distance:307,date:"2026-05-30",cost:59,fuelType:"",notes:""},
+{distance:311,date:"2026-06-22",cost:62,fuelType:"",notes:""},
+{distance:273,date:"2026-07-19",cost:54,fuelType:"",notes:""},
+{distance:279,date:"2026-08-12",cost:58,fuelType:"",notes:""},
+{distance:322,date:"2026-09-01",cost:58,fuelType:"",notes:""}
 ];
 
-let entries = [];
+const KEY = "petrolEntries_v2";
+let entries = JSON.parse(localStorage.getItem(KEY) || "null") || defaultEntries.slice();
+let sortKey = "date", sortDir = -1, editIndex = null;
+const $ = id => document.getElementById(id);
+const save = () => localStorage.setItem(KEY, JSON.stringify(entries));
 
-function loadEntries() {
-    const stored = localStorage.getItem("petrolEntries");
-    if (stored) { entries = JSON.parse(stored); }
-    else { entries = [...defaultEntries]; saveEntries(); }
+/* ---------- helpers ---------- */
+const fmtRM = n => "RM " + n.toLocaleString("en-MY",{minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtDate = d => new Date(d+"T00:00:00").toLocaleDateString("en-MY",{day:"2-digit",month:"short",year:"numeric"});
+const monthKey = d => d.slice(0,7);
+const monthLabel = k => new Date(k+"-01T00:00:00").toLocaleDateString("en-MY",{month:"short",year:"2-digit"}).toUpperCase().replace(/\s+/," ");
+const fuelBadge = f => {
+  const map = { "95":["f-95","95 Petrol"], "97":["f-97","97 Petrol"], "half":["f-half","Half Tank"] };
+  return map[f] ? `<span class="fuel-badge ${map[f][0]}">${map[f][1]}</span>` : `<span class="fuel-badge f-none">—</span>`;
+};
+let toastTimer;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* ---------- stats ---------- */
+function renderStats(){
+  const total = entries.reduce((s,e)=>s+e.cost,0);
+  const km    = entries.reduce((s,e)=>s+e.distance,0);
+  $("st-total").textContent  = fmtRM(total);
+  $("st-entries").textContent= entries.length + " fill-up" + (entries.length!==1?"s":"");
+  $("st-km").textContent      = Math.round(km).toLocaleString() + " km";
+  $("st-avgdist").textContent = entries.length ? "avg " + (km/entries.length).toFixed(0) + " km / fill-up" : "–";
+  $("st-rmk").textContent     = km ? fmtRM(total/km) : "—";
+  if(entries.length){
+    const ds = entries.map(e=>e.date).sort();
+    $("st-months").textContent = "spanning " + monthLabel(monthKey(ds[0])) + " → " + monthLabel(monthKey(ds.at(-1)));
+    let best = entries.reduce((a,b)=> b.cost/b.distance < a.cost/a.distance ? b : a);
+    $("st-best").textContent   = fmtRM(best.cost/best.distance) + " /km";
+    $("st-bestdate").textContent= fmtDate(best.date);
+  }
 }
 
-function saveEntries() {
-    localStorage.setItem("petrolEntries", JSON.stringify(entries));
+/* ---------- table ---------- */
+function visibleEntries(){
+  const q = $("search").value.toLowerCase().trim();
+  const fuel = $("filterFuel").value;
+  const year = $("filterYear").value;
+  let list = entries.map((e,i)=>({e,i}))
+    .filter(({e}) =>
+      (!q || (e.notes||"").toLowerCase().includes(q) || e.fuelType.includes(q)) &&
+      (fuel==="" ? true : fuel==="all-empty" ? !e.fuelType : e.fuelType===fuel) &&
+      (!year || e.date.startsWith(year)));
+  list.sort((a,b)=>{
+    const va=a.e[sortKey], vb=b.e[sortKey];
+    return (typeof va==="number" ? va-vb : String(va).localeCompare(String(vb))) * sortDir;
+  });
+  return list;
 }
 
-function fmtDate(d) {
-    const parts = d.split("-");
-    return parts[2] + "/" + parts[1] + "/" + parts[0];
+function renderTable(){
+  const list = visibleEntries();
+  $("countBadge").textContent = list.length;
+  document.querySelectorAll("thead th .arrow").forEach(a=>a.textContent="");
+  const th = document.querySelector(`th[data-sort="${sortKey}"]`);
+  if(th) th.querySelector(".arrow").textContent = sortDir===1 ? "▲" : "▼";
+
+  $("tbody").innerHTML = list.length ? list.map(({e,i},n)=>`
+    <tr>
+      <td class="num">${n+1}</td>
+      <td>${fmtDate(e.date)}</td>
+      <td class="num">${e.distance.toLocaleString()}</td>
+      <td class="num"><strong>${e.cost.toLocaleString("en-MY",{maximumFractionDigits:2})}</strong></td>
+      <td>${fuelBadge(e.fuelType)}</td>
+      <td class="notes-cell" title="${(e.notes||"").replace(/"/g,"&quot;")}">${e.notes||"—"}</td>
+      <td class="num">${fmtRM(e.cost/e.distance)}</td>
+      <td style="text-align:right">
+        <button class="icon-btn" title="Edit" onclick="startEdit(${i})">✏️</button>
+        <button class="icon-btn del" title="Delete" onclick="removeEntry(${i})">🗑</button>
+      </td>
+    </tr>`).join("")
+  : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">No entries match. Add one above! ⛽</td></tr>`;
+
+  $("filterYear").innerHTML = "<option value=\"\">All years</option>" +
+    [...new Set(entries.map(e=>e.date.slice(0,4)))].sort().reverse()
+      .map(y=>`<option value="${y}" ${y===$("filterYear").value?"selected":""}>${y}</option>`).join("");
 }
 
-function fuelBadge(ft, notes) {
-    if (ft === "97")   return '<span class="badge badge-97">R97</span>';
-    if (ft === "half") return '<span class="badge badge-half">Half Tank</span>';
-    if (ft === "95")   return '<span class="badge badge-95">95</span>';
-    if (notes)         return '<span class="badge badge-95">' + notes + '</span>';
-    return '<span style="color:#aaa">—</span>';
+/* ---------- chart ---------- */
+function renderChart(){
+  const cv = $("chart"), ctx = cv.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = cv.clientWidth*dpr; cv.height = 260*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W = cv.clientWidth, H = 260, padL=46, padR=46, padT=18, padB=34;
+
+  const byMonth = {};
+  entries.forEach(e=>{ const k=monthKey(e.date); (byMonth[k]??={cost:0,km:0}); byMonth[k].cost+=e.cost; byMonth[k].km+=e.distance; });
+  const keys = Object.keys(byMonth).sort();
+
+  ctx.clearRect(0,0,W,H);
+  if(!keys.length){ ctx.fillStyle="#8b96a5"; ctx.font="14px sans-serif"; ctx.textAlign="center"; ctx.fillText("No data yet", W/2, H/2); return; }
+
+  const maxCost = Math.max(...keys.map(k=>byMonth[k].cost)) * 1.15;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const step  = keys.length===1 ? plotW : plotW/(keys.length-1);
+  const barW  = Math.min(34, step*0.55);
+
+  // gridlines + left axis (cost)
+  ctx.font="10px sans-serif"; ctx.textAlign="right";
+  for(let i=0;i<=4;i++){
+    const v = maxCost/4*i, y = padT+plotH - (v/maxCost)*plotH;
+    ctx.strokeStyle="rgba(255,255,255,.07)"; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    ctx.fillStyle="#8b96a5"; ctx.fillText("RM"+Math.round(v), padL-6, y+3);
+  }
+
+  // bars (cost)
+  keys.forEach((k,i)=>{
+    const x = keys.length===1 ? W/2 : padL + step*i;
+    const h = (byMonth[k].cost/maxCost)*plotH;
+    const g = ctx.createLinearGradient(0,padT+plotH-h,0,padT+plotH);
+    g.addColorStop(0,"#ffb703"); g.addColorStop(1,"rgba(255,183,3,.25)");
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.roundRect(x-barW/2, padT+plotH-h, barW, h, 4); ctx.fill();
+
+    ctx.fillStyle="#c9d2de"; ctx.textAlign="center"; ctx.font="10px sans-serif";
+    ctx.fillText(monthLabel(k), x, H-padB+16);
+  });
+
+  // line (avg RM/km per month) — right axis
+  const rates = keys.map(k=>byMonth[k].cost/byMonth[k].km);
+  const maxR = Math.max(...rates)*1.3;
+  ctx.strokeStyle="#2dd4a7"; ctx.lineWidth=2; ctx.beginPath();
+  keys.forEach((k,i)=>{
+    const x = keys.length===1 ? W/2 : padL + step*i;
+    const y = padT+plotH - (rates[i]/maxR)*plotH;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
+  ctx.stroke();
+  keys.forEach((k,i)=>{
+    const x = keys.length===1 ? W/2 : padL + step*i;
+    const y = padT+plotH - (rates[i]/maxR)*plotH;
+    ctx.fillStyle="#2dd4a7"; ctx.beginPath(); ctx.arc(x,y,3.5,0,7); ctx.fill();
+    ctx.fillStyle="#8b96a5"; ctx.textAlign="left"; ctx.font="10px sans-serif";
+  });
+  ctx.textAlign="left";
+  for(let i=0;i<=4;i++){
+    const v = maxR/4*i, y = padT+plotH-(v/maxR)*plotH;
+    ctx.fillStyle="#2dd4a7"; ctx.fillText(v.toFixed(2), W-padR+6, y+3);
+  }
 }
 
-function renderTable() {
-    const tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
-    const sorted = [...entries].sort((a,b) => new Date(a.date) - new Date(b.date));
-    sorted.forEach((e, i) => {
-        const originalIndex = entries.indexOf(e);
-        const rPerKm = (e.cost / e.distance).toFixed(3);
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${i+1}</td><td>${fmtDate(e.date)}</td><td>${e.distance}</td>` +
-            `<td>RM${e.cost.toFixed(2)}</td><td>${fuelBadge(e.fuelType, e.notes)}</td>` +
-            `<td>${e.notes||""}</td><td>${rPerKm}</td>` +
-            `<td><button class="btn-delete" onclick="delEntry(${originalIndex})">✕</button></td>`;
-        tbody.appendChild(tr);
-    });
-    document.getElementById("entryCount").textContent = entries.length;
+/* ---------- actions ---------- */
+function startEdit(i){
+  editIndex = i; const e = entries[i];
+  $("distance").value=e.distance; $("date").value=e.date; $("cost").value=e.cost;
+  $("fuelType").value=e.fuelType||""; $("notes").value=e.notes||"";
+  $("submitBtn").textContent="✔ Update Entry";
+  $("cancelEdit").style.display="inline-block";
+  $("editIndicator").style.display="inline";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function cancelEdit(){
+  editIndex=null; $("entryForm").reset(); $("submitBtn").textContent="＋ Add Entry";
+  $("cancelEdit").style.display="none"; $("editIndicator").style.display="none";
+}
+function removeEntry(i){
+  if(!confirm(`Delete entry from ${fmtDate(entries[i].date)}?`)) return;
+  entries.splice(i,1); save(); renderAll(); toast("Entry deleted");
 }
 
-function renderSummary() {
-    const totalKm   = entries.reduce((s,e) => s + e.distance, 0);
-    const totalCost = entries.reduce((s,e) => s + e.cost, 0);
-    const avgTrip   = entries.length ? (totalCost / entries.length).toFixed(2) : "—";
-    const avgRkm    = totalKm ? (totalCost / totalKm).toFixed(3) : "—";
-    document.getElementById("summaryCards").innerHTML = `
-        <div class="card"><div class="label">Total Distance</div><div class="value">${totalKm.toLocaleString()} km</div></div>
-        <div class="card"><div class="label">Total Cost</div><div class="value">RM${totalCost.toFixed(2)}</div></div>
-        <div class="card"><div class="label">Avg / Trip</div><div class="value">RM${avgTrip}</div></div>
-        <div class="card"><div class="label">Avg RM/km</div><div class="value">${avgRkm}</div></div>`;
-}
-
-function delEntry(idx) {
-    if (confirm("Delete this entry?")) {
-        entries.splice(idx, 1);
-        saveEntries(); renderTable(); renderSummary();
-    }
-}
-
-document.getElementById("petrolForm").addEventListener("submit", function(ev) {
-    ev.preventDefault();
-    const entry = {
-        distance: parseFloat(document.getElementById("distance").value),
-        date:     document.getElementById("date").value,
-        cost:     parseFloat(document.getElementById("cost").value),
-        fuelType: document.getElementById("fuelType").value,
-        notes:    document.getElementById("notes").value.trim()
-    };
-    entries.push(entry);
-    saveEntries(); renderTable(); renderSummary();
-    this.reset();
+$("entryForm").addEventListener("submit", ev=>{
+  ev.preventDefault();
+  const e = { distance:+$("distance").value, date:$("date").value, cost:+$("cost").value,
+              fuelType:$("fuelType").value, notes:$("notes").value.trim() };
+  if(e.distance<=0 || !e.date) return toast("Please enter a valid date & distance");
+  editIndex===null ? entries.push(e) : (entries[editIndex]=e);
+  save(); cancelEdit(); renderAll();
+  toast(editIndex!==null ? "Entry updated" : "Entry added ⛽");
 });
 
-loadEntries(); renderTable(); renderSummary();
+$("exportBtn").onclick = () => {
+  const rows = [["Date","Distance(km)","Cost(RM)","FuelType","RM/km","Notes"],
+    ...entries.map(e=>[e.date,e.distance,e.cost,e.fuelType,(e.cost/e.distance).toFixed(4), e.notes])];
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = Object.assign(document.createElement("a"), {href:URL.createObjectURL(new Blob([csv],{type:"text/csv"})),download:"petrol-entries.csv"});
+  a.click(); URL.revokeObjectURL(a.href); toast("CSV downloaded ⬇");
+};
+$("clearAllBtn").onclick = () => {
+  if(!confirm("Delete ALL entries? This cannot be undone.")) return;
+  entries=[]; save(); renderAll(); toast("All entries cleared");
+};
+document.querySelectorAll("thead th[data-sort]").forEach(th=>{
+  th.onclick = () => { const k=th.dataset.sort; sortDir = (k===sortKey)?-sortDir:-1; sortKey=k; renderTable(); };
+});
+["search","filterFuel","filterYear"].forEach(id=> $(id).addEventListener("input", renderTable));
+window.addEventListener("resize", renderChart);
+
+function renderAll(){ renderStats(); renderTable(); renderChart(); }
+renderAll();
 </script>
 </body>
 </html>
